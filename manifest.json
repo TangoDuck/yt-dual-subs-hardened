@@ -61,6 +61,7 @@
         "https://www.youtube.com/*"
       ],
       "js": [
+        "security.js",
         "fonts.js",
         "content.js"
       ],
@@ -95,5 +96,6 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "version_name": "3.7.0 local hardened"
 }

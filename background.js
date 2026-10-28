@@ -15,7 +15,23 @@
 // ahead of prefetch. No internal retries for transport errors: a failed request
 // is simply re-issued by content.js when its cue is next active.
 
-importScripts("providers.js", "languages.js", "fonts.js");
+importScripts("security.js", "providers.js", "languages.js", "fonts.js");
+// Fail closed if the browser cannot restrict secret storage access.
+const hardeningReady = chrome.storage.local.setAccessLevel({accessLevel: "TRUSTED_CONTEXTS"})
+  .then(() => true, () => false);
+let budgetTail = Promise.resolve();
+function reserveLlmBudget(body) {
+  const run = budgetTail.then(async () => {
+    if (!await hardeningReady) throw Error("Secret storage protection unavailable");
+    const characters = JSON.stringify(body).length;
+    const got = await chrome.storage.local.get({securityBudget: null});
+    const next = self.YTDS_SECURITY.nextBudget(got.securityBudget, characters, Date.now());
+    await chrome.storage.local.set({securityBudget: next});
+  });
+  budgetTail = run.catch(() => {});
+  return run;
+}
+
 const PROVIDERS = self.YTDS_PROVIDERS;
 const LANGS = self.YTDS_LANGS;
 
@@ -206,6 +222,7 @@ async function keyFingerprint(key) {
 }
 
 async function resolveByo(opts) {
+  if (!await hardeningReady) throw Error("Secret storage protection unavailable");
   // Which provider this is FOR. Normally the one the extension translates with,
   // but the settings page can ask about a provider the user is only looking at
   // — reading its model list is a question about that provider, not a decision
@@ -1033,9 +1050,12 @@ async function llmOnce(texts, targetLang, target, opts) {
     target.provider.extraHeaders || {}
   );
 
+  try { await reserveLlmBudget(body); }
+  catch (error) { throw tag(error, {code: "safetyLimit"}); }
   let res;
   try {
     res = await fetch(target.endpoint + "/chat/completions", {
+      redirect: "error",
       method: "POST",
       headers,
       body: JSON.stringify(body),
@@ -2681,6 +2701,30 @@ async function uiTableFor() {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  const own = sender && sender.id === chrome.runtime.id;
+  let valid = false;
+  try {
+    const u = new URL(sender.url || "");
+    valid = own && (u.origin === new URL(chrome.runtime.getURL("/")).origin ||
+      (sender.tab && u.protocol === "https:" && u.hostname === "www.youtube.com"));
+  } catch (_) {}
+  if (!valid) { sendResponse({ok:false, error:"Untrusted sender"}); return false; }
+  // Non-secret UI preferences required by the isolated subtitle script.
+  if (msg && msg.type === "safeLocal") {
+    const allow = new Set(["handleHintsLeft", "menuHintsLeft", "fontLangsSeen"]);
+    const data = msg.data;
+    if (!data || typeof data !== "object" || Array.isArray(data) ||
+        Object.keys(data).some(k => !allow.has(k)) || JSON.stringify(data).length > 2048 ||
+        !["get", "set"].includes(msg.action)) {
+      sendResponse({}); return false;
+    }
+    hardeningReady.then(ok => {
+      if (!ok) throw Error("storage unavailable");
+      return chrome.storage.local[msg.action](data);
+    }).then(value => sendResponse(value || {})).catch(() => sendResponse({}));
+    return true;
+  }
+
   if (msg && msg.type === "uiTable") {
     uiTableFor().then((t) => sendResponse(t || null)).catch(() => sendResponse(null));
     return true;                                            // async reply

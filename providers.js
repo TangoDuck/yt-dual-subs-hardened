@@ -33,6 +33,8 @@
   const PROVIDERS = [
     {
       id: "deepseek", name: "DeepSeek", short: "DeepSeek", kind: "llm",
+      // Subtitle translation needs direct output, not default high-effort thinking.
+      extraBody: { thinking: { type: "disabled" } },
       baseUrl: "https://api.deepseek.com/v1",
       origin: "https://api.deepseek.com",
       defaultModel: "deepseek-chat",

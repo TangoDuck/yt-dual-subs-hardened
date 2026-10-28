@@ -10,6 +10,17 @@
 //       poll .ytp-caption-segment every 200ms, debounce gtx translate.
 (() => {
   "use strict";
+  const safeLocal = {
+    get(data, callback) { chrome.runtime.sendMessage({type:"safeLocal", action:"get", data}, value => {
+      if (chrome.runtime.lastError) { if(callback) callback({}); return; }
+      if(callback) callback(value || {});
+    }); },
+    set(data, callback) { chrome.runtime.sendMessage({type:"safeLocal", action:"set", data}, value => {
+      if (chrome.runtime.lastError) return;
+      if(callback) callback(value || {});
+    }); }
+  };
+
 
   // ---- guard against double injection (mirror inject.js) -------------------
   // In normal MV3 operation this runs once per document, but an extension
@@ -734,10 +745,10 @@
   function maybeHintHandle() {
     if (hintedThisVideo || !overlay || !handleEl) return;
     hintedThisVideo = true;                    // one shot per video either way
-    extCall(() => chrome.storage.local.get({ handleHintsLeft: 0 }, (got) => {
+    extCall(() => safeLocal.get({ handleHintsLeft: 0 }, (got) => {
       const left = Number(got && got.handleHintsLeft) || 0;
       if (left <= 0) return;
-      extCall(() => chrome.storage.local.set({ handleHintsLeft: left - 1 }));
+      extCall(() => safeLocal.set({ handleHintsLeft: left - 1 }));
       flashHandle(3600);
     }));
   }
@@ -798,10 +809,10 @@
     if (menuHintedThisVideo || menuHintKilled) return;
     if (!toggleBtn || !toggleBtn.isConnected || !moreEl) return;
     menuHintedThisVideo = true;                // one shot per video either way
-    extCall(() => chrome.storage.local.get({ menuHintsLeft: 0 }, (got) => {
+    extCall(() => safeLocal.get({ menuHintsLeft: 0 }, (got) => {
       const left = Number(got && got.menuHintsLeft) || 0;
       if (left <= 0 || menuHintKilled) return;
-      extCall(() => chrome.storage.local.set({ menuHintsLeft: left - 1 }));
+      extCall(() => safeLocal.set({ menuHintsLeft: left - 1 }));
       if (!toggleBtn || !toggleBtn.isConnected) return;
       toggleBtn.classList.add("ytds-menu-hint");
       showMenuBubble();
@@ -1110,12 +1121,12 @@
   function noteLangSeen(lang) {
     if (lang === langSeenLast) return;
     langSeenLast = lang;
-    extCall(() => chrome.storage.local.get({ fontLangsSeen: [] }, (got) => {
+    extCall(() => safeLocal.get({ fontLangsSeen: [] }, (got) => {
       if (chrome.runtime.lastError) return;
       const cur = Array.isArray(got && got.fontLangsSeen) ? got.fontLangsSeen : [];
       if (cur[0] === lang) return;
       const next = [lang].concat(cur.filter((c) => c !== lang)).slice(0, 5);
-      try { chrome.storage.local.set({ fontLangsSeen: next }); } catch (_e) { /* ignore */ }
+      try { safeLocal.set({ fontLangsSeen: next }); } catch (_e) { /* ignore */ }
     }));
   }
 
@@ -1726,7 +1737,7 @@
       menuHintKilled = true;
       toggleBtn.classList.remove("ytds-menu-hint");
       hideMenuBubble();
-      extCall(() => chrome.storage.local.set({ menuHintsLeft: 0 }));
+      extCall(() => safeLocal.set({ menuHintsLeft: 0 }));
     }
     menuEl = document.createElement("div");
     menuEl.className = "ytds-menu";
@@ -5331,6 +5342,8 @@
     if (evt.source !== window) return;
     const d = evt.data;
     if (!d || d.source !== "ytds-inject") return;
+    if (["cues", "nocues", "trackwarn"].includes(d.type) &&
+        !globalThis.YTDS_SECURITY.cueMessage(d, currentVideoId, configNonce)) return;
     // Export replies are handled even when the overlay is disabled (they are a
     // direct response to a user-initiated download, not the live cue stream).
     if (d.type === "exportdata") { resolveExportData(d); return; }

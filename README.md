@@ -1,3 +1,45 @@
+# YouTube Dual Subtitles — Hardened Fork
+
+This repository is a security-hardening fork maintained by TangoDuck, based on [Gythiro/yt-dual-subs](https://github.com/Gythiro/yt-dual-subs), version 3.7.0, commit `5657c8a18ca30c84b5d4662bca58e3e9214ffdff`.
+
+**Original author: Gythiro.** The bilingual-caption UI, caption extraction, provider integrations and other original features come from the upstream project. This fork does not claim original authorship of those features. The original MIT license and copyright notice are preserved in [LICENSE](LICENSE). The upstream README is retained below.
+
+## Scope of this fork
+
+Chrome Manifest V3 extension for translating existing YouTube caption tracks through a user-configured translation/LLM provider and displaying synchronized bilingual subtitles. This is caption translation, not a new audio speech-recognition system. Users supply their own API keys; no credentials are included.
+
+Local changes, developed with AI assistance:
+- Restrict local extension storage to trusted extension contexts.
+- Validate extension message senders and allowlist access to non-sensitive preferences.
+- Validate caption video/configuration identifiers, counts, lengths and timestamps.
+- Reject redirects for LLM chat-completions requests.
+- Persist and serialize local request reservations: 600 requests/hour, 3,000/day, 2,000,000 JSON characters/day and 100,000 characters/request, using UTC windows.
+
+## Install and configure
+
+1. Download this fork's source and extract it.
+2. In `chrome://extensions`, enable Developer mode and select **Load unpacked**.
+3. Select the folder containing `manifest.json`; disable other copies of the extension.
+4. Configure your selected provider and API key in the extension settings.
+5. Open a YouTube video that has captions and enable bilingual subtitles.
+
+API usage may incur charges from the selected provider. Local limits count requests and JSON characters, not tokens or actual billing. They are not provider-side spending limits and can reset when extension data is cleared. DeepL and speech requests are outside this local LLM budget.
+
+## Validation and limitations
+
+Run `node test_hardened.cjs` from the repository root. Checks cover caption validation, budget boundaries, the actual patched message handler, sender/preference validation, JavaScript syntax and script load order.
+
+Local automated checks do not establish full live-browser or paid API integration correctness. Full playback, all voice/font/summary features and all provider integrations require further testing. A malicious script already executing in the YouTube page can still construct messages with valid visible identifiers. Storage is not an OS-encrypted credential vault.
+
+This is a newly published derivative project; independent adoption and download counts have not been established. Upstream popularity belongs to the upstream project.
+
+## 中文说明
+
+本仓库由 TangoDuck 维护，是 Gythiro/yt-dual-subs 的安全加固派生版本。原作者为 Gythiro，原项目采用 MIT 许可证；现有双语字幕和模型服务连接等核心功能来自上游。本地修改使用了 AI 辅助，重点是消息校验、密钥访问隔离及本地请求用量限制。使用者自行填写 API Key。此版本翻译已有 YouTube 字幕，不提供新的音频识别功能。尚无已核实的独立用户量或下载量，不将上游数据算作本项目数据。
+
+---
+
+## Original upstream README
 <div align="center">
 
 <a href="https://gythiro.github.io/yt-dual-subs/"><img src="https://gythiro.github.io/yt-dual-subs/img/icon128.png" width="110" alt="Dual Subtitles for YouTube icon"></a>
@@ -189,3 +231,4 @@ A clean‑room reimplementation inspired by the (closed‑source, discontinued) 
 <sub>*Not affiliated with, endorsed by, or sponsored by YouTube or Google LLC. "YouTube" is a trademark of Google LLC, used here only to describe compatibility.*</sub>
 
 <p align="right"><a href="#readme">↑ Back to top</a></p>
+
