@@ -33,10 +33,6 @@ Local automated checks do not establish full live-browser or paid API integratio
 
 This is a newly published derivative project; independent adoption and download counts have not been established. Upstream popularity belongs to the upstream project.
 
-## 中文说明
-
-本仓库由 TangoDuck 维护，是 Gythiro/yt-dual-subs 的安全加固派生版本。原作者为 Gythiro，原项目采用 MIT 许可证；现有双语字幕和模型服务连接等核心功能来自上游。本地修改使用了 AI 辅助，重点是消息校验、密钥访问隔离及本地请求用量限制。使用者自行填写 API Key。此版本翻译已有 YouTube 字幕，不提供新的音频识别功能。尚无已核实的独立用户量或下载量，不将上游数据算作本项目数据。
-
 ---
 
 ## Original upstream README
@@ -231,4 +227,5 @@ A clean‑room reimplementation inspired by the (closed‑source, discontinued) 
 <sub>*Not affiliated with, endorsed by, or sponsored by YouTube or Google LLC. "YouTube" is a trademark of Google LLC, used here only to describe compatibility.*</sub>
 
 <p align="right"><a href="#readme">↑ Back to top</a></p>
+
 
